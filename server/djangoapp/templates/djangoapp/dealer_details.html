@@ -47,8 +47,8 @@
     </nav>
     
     {% block content %}
-    {% if review_list %}
     <div class="container-fluid">
+    {% if review_list %}
         {% for review in review_list %}
         <div class="card text-dark bg-light mb-3 text-left">
             <div class="card-header">{{review.name}}</div>
@@ -62,6 +62,10 @@
     </div>
     {% else %}
     <h3>No reviews available.</h3>
+    {% if user.is_authenticated %}
+    <a href="{% url 'djangoapp:addreview' dealer_id %}" class="btn btn-primary my-3">Add Review</a>
+    {% else %}
+    <p class="lead">Please, login.</p>
     {% endif %}
     {% endblock %}
 

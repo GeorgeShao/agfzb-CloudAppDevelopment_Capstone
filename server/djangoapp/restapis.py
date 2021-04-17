@@ -4,7 +4,6 @@ import urllib
 import datetime
 from .models import CarDealer, DealerReview
 from requests.auth import HTTPBasicAuth
-import logger
 
 
 def get_req(url, api_key=None, **kwargs):
@@ -19,7 +18,20 @@ def get_req(url, api_key=None, **kwargs):
         print("ERROR: ", e)
     print(f"Status Code: {response.status_code}")
     json_data = json.loads(response.text)
-    logger.warning("TEST:", response.text)
+    return json_data
+
+def post_request(url, json_payload, **kwargs):
+    print("Payload: ", json_payload, ". Params: ", kwargs)
+    print(f"POST {url}")
+    try:
+        response = requests.post(url, headers={'Content-Type': 'application/json'},
+                                json=json_payload, params=kwargs)
+    except:
+        # If any error occurs
+        print("Network exception occurred")
+    status_code = response.status_code
+    print("With status {} ".format(status_code))
+    json_data = json.loads(response.text)
     return json_data
 
 def get_dealers_from_cf(url, state=""):
@@ -28,7 +40,6 @@ def get_dealers_from_cf(url, state=""):
         json_result = get_req(url)
     else:
         json_result = get_req(url, state=state)
-
     if json_result:
         dealers = json_result["entries"]
         for dealer in dealers:

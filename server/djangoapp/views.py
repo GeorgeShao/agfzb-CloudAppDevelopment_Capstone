@@ -3,16 +3,12 @@ from django.http import HttpResponseRedirect, HttpResponse
 from django.contrib.auth.models import User
 from django.shortcuts import get_object_or_404, render, redirect
 # from .models import related models
-from .restapis import get_dealers_from_cf, get_dealer_by_id_from_cf, get_dealer_reviews_from_cf
+from .restapis import get_dealers_from_cf, get_dealer_by_id_from_cf, get_dealer_reviews_from_cf, post_request
 from django.contrib.auth import login, logout, authenticate
 from django.contrib import messages
 from datetime import datetime
 import logging
 import json
-
-
-# Get an instance of a logger
-logger = logging.getLogger(__name__)
 
 # Create your views here.
 
@@ -70,7 +66,7 @@ def registration_request(request):
             User.objects.get(username=username)
             user_exist = True
         except:
-            logger.debug("{} is new user".format(username))
+            pass
         if not user_exist:
             user = User.objects.create_user(username=username, 
                                             first_name=first_name, 
@@ -83,7 +79,6 @@ def registration_request(request):
 
 # Update the `get_dealerships` view to render the index page with a list of dealerships
 def get_dealerships(request):
-    logger.warning("TEST 123")
     context = {}
     if request.method == "GET":
         dealerships = get_dealers_from_cf("https://af176ef2.us-south.apigw.appdomain.cloud/api/dealership/")
@@ -98,9 +93,40 @@ def get_dealer_details(request, dealer_id):
         # Get reviews from the URL
         reviews = get_dealer_reviews_from_cf("https://af176ef2.us-south.apigw.appdomain.cloud/api/review/", dealer_id)
         context['review_list'] = reviews
+        context['dealer_id'] = dealer_id
         return render(request, 'djangoapp/dealer_details.html', context)
 
 # Create a `add_review` view to submit a review
-# def add_review(request, dealer_id):
-# ...
+def add_review(request, dealer_id):
+    context = {}
+    if request.method == "GET":
+        context["dealer_id"] = dealer_id
+        return render(request, 'djangoapp/add_review.html', context)
 
+    if request.method == "POST":
+        user = request.user
+        if not user.is_authenticated:
+            context["error_message"] = "Please, login at first"
+            context["dealer_id"] = dealer_id
+            return render(request, 'djangoapp/add_review.html', context)
+
+        review = {}
+        review["id"] = 0
+        review["name"] = request.POST["createreviewform_name"]
+        review["dealership"] = dealer_id
+        review["review"] = request.POST["createreviewform_review"]
+        review["purchase"] = request.POST["createreviewform_purchase"]
+        review["purchase_date"] = request.POST["createreviewform_purchase_date"]
+        review["car_make"] = request.POST["createreviewform_car_make"]
+        review["car_model"] = request.POST["createreviewform_car_model"]
+        review["car_year"] = request.POST["createreviewform_car_year"]
+        json_payload = {}
+        json_payload["review"] = review
+        json_result = post_request("https://af176ef2.us-south.apigw.appdomain.cloud/api/review/", json_payload, dealerId=dealer_id)
+        print("POST request result: ", json_result)
+        if json_result["status"] == 200:
+            context["success_message"] = "Review submitted!"
+        else:
+            context["error_message"] = "ERROR: Review not submitted."
+        context["dealer_id"] = dealer_id
+        return render(request, 'djangoapp/add_review.html', context)
